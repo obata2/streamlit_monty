@@ -158,7 +158,7 @@ with st.expander("シミュレーションする"):
   st.write("当たりの確率が異なることを、シミュレーションによって確かめることができます。")
   repeat = st.slider(
     "試行回数を選択してください",
-    min_value = 1, max_value = 10000, value = 1000, step = 100
+    min_value = 100, max_value = 100000, value = 10000, step = 100
     )
   do = st.button("スタート")
   if do:
