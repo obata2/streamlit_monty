@@ -3,13 +3,16 @@ import pandas as pd
 import random
 from PIL import Image
 
-#選択してなく、かつ当たりでもないドアを1つ、_missにする
+#選択してなく、かつ当たりでもないドアを1つ、開く
 def chairman(doors_img, select_index, hit_index):
-  open_index = random.randint(0, 2)
-  while(open_index == select_index or open_index == hit_index):
+  if "open_index" not in st.session_state:
     open_index = random.randint(0, 2)
+    while(open_index == select_index or open_index == hit_index):
+      open_index = random.randint(0, 2)
+    st.session_state.open_index = open_index
+  else:
+    open_index = st.session_state.open_index
   doors_img[open_index] = Image.open("assets\door_miss.png")
-  st.session_state.open_index = open_index
   if open_index == 0:
     st.write("司会者は、左の扉 を開けました")
   elif open_index == 1:
@@ -18,7 +21,7 @@ def chairman(doors_img, select_index, hit_index):
     st.write("司会者は、右の扉 を開けました")
   return doors_img
   
-#選択を変更する  ->   select_indexではなく、open_indexでもない所に移る
+#選んだ扉を変更する  ->   select_indexではなく、open_indexでもない所に移る
 def change(select_index):
   changedSelect_index = random.randint(0, 2)
   open_index = st.session_state.open_index
@@ -109,7 +112,7 @@ if sel_1 == None:
   hit_index = random.randint(0,2)
   st.session_state.hit_index = hit_index
   show(doors_img, select_index)
-#
+#2回目以降のローディングの度に実行される
 else:
   hit_index = st.session_state.hit_index
   doors_img = chairman(doors_img, select_index, hit_index)
