@@ -3,28 +3,17 @@ import pandas as pd
 import random
 from PIL import Image
 
-#選択してなく、かつ当たりでもないドアを1つ、開く
-def chairman(doors_img, select_index, hit_index):
-  if "open_index" not in st.session_state:
+#司会者が開けるドアを見つける
+def open(select_index, hit_index):
+  open_index = random.randint(0, 2)
+  while(open_index == select_index or open_index == hit_index):
     open_index = random.randint(0, 2)
-    while(open_index == select_index or open_index == hit_index):
-      open_index = random.randint(0, 2)
-    st.session_state.open_index = open_index
-  else:
-    open_index = st.session_state.open_index
-  doors_img[open_index] = Image.open("assets\door_miss.png")
-  if open_index == 0:
-    st.write("司会者は、左の扉 を開けました")
-  elif open_index == 1:
-    st.write("司会者は、中央の扉 を開けました")
-  elif open_index == 2:
-    st.write("司会者は、右の扉 を開けました")
-  return doors_img
+  st.session_state.open_index = open_index
+  return open_index
   
-#選んだ扉を変更する  ->   select_indexではなく、open_indexでもない所に移る
-def change(select_index):
+#選んだ扉を変更する
+def change(select_index, open_index):
   changedSelect_index = random.randint(0, 2)
-  open_index = st.session_state.open_index
   while(changedSelect_index == select_index or changedSelect_index == open_index):
     changedSelect_index = random.randint(0, 2)
   return changedSelect_index
@@ -46,29 +35,25 @@ def show(doors_img, select_index):
     if select_index == 2:
       st.image(cursor)
 
-#任意の回数のシミュレートを行い、当たりの回数をカウントしていく    ->  hit_index, select_index, open_index を用意する
+#任意の回数のシミュレートを行い、当たりの回数をカウントしていく
 def simulate(repeat, count):
   c1 = 0
   c2 = 0 
   for i in range(1, repeat+1):
     count[i][0] = c1
     count[i][1] = c2
-    hit_index_sim = random.randint(0,2)
     select_index_sim = random.randint(0,2)
-    open_index_sim = random.randint(0,2)
-    while(open_index_sim == select_index_sim or open_index_sim == hit_index_sim):
-      open_index_sim = random.randint(0,2)
-    #選択を変えないときの正誤判定   ->  select と hit が一致しているか
+    hit_index_sim = random.randint(0,2)
+    open_index_sim = open(select_index_sim, hit_index_sim)
+    #選択を変えないときの正誤判定
+    if select_index_sim == hit_index_sim:
+      c1 += 1
+      count[i][0] = c1
+    #選択を変えるときの正誤判定
+    select_index_sim = change(select_index_sim, open_index_sim)
     if select_index_sim == hit_index_sim:
       c2 += 1
       count[i][1] = c2
-    #選択を変えるときの正誤判定     ->   selectではなく、openでもないところへ移動して一致するか
-    changedSelect_index_sim = random.randint(0,2)
-    while(changedSelect_index_sim == select_index_sim or changedSelect_index_sim == open_index_sim):
-      changedSelect_index_sim = random.randint(0,2)
-    if(changedSelect_index_sim == hit_index_sim):
-      c1 += 1
-      count[i][0] = c1
   return count
 
 
@@ -107,15 +92,25 @@ doors_img = [0]*3
 doors_img[0] = Image.open("assets\door_closed.png")
 doors_img[1] = Image.open("assets\door_closed.png")
 doors_img[2] = Image.open("assets\door_closed.png")
-#初期状態のみ実行される  -  3つ全て閉じた状態のドアの表示と、当たりドアの抽選
+#初期状態のみ実行される    ->    当たりドアの抽選
 if sel_1 == None:
   hit_index = random.randint(0,2)
   st.session_state.hit_index = hit_index
   show(doors_img, select_index)
-#2回目以降のローディングの度に実行される
+#2回目以降のローディングでは以下
 else:
   hit_index = st.session_state.hit_index
-  doors_img = chairman(doors_img, select_index, hit_index)
+  if "open_index" not in st.session_state:
+    open_index = open(select_index, hit_index)
+  else:
+    open_index = st.session_state.open_index
+  doors_img[open_index] = Image.open("assets\door_miss.png")
+  if open_index == 0:
+    st.write("司会者は、左の扉 を開けました")
+  elif open_index == 1:
+    st.write("司会者は、中央の扉 を開けました")
+  elif open_index == 2:
+    st.write("司会者は、右の扉 を開けました")
   st.write("2. 選んだ扉を変更しますか？")
   sel_2 = st.radio(
     "",
@@ -124,10 +119,8 @@ else:
     horizontal = True,
     label_visibility = "collapsed",
   )
-  #扉の変更の有無が入力されているとき
   if sel_2 == "する":
-    select_index = change(select_index)
-  #hit_index以外のドアは外れに、hit_indexは当たりに     ->   sel_2がNoneでないときのみ
+    select_index = change(select_index, open_index)
   if sel_2 != None:
     for i in range(0, 3):
       if i != hit_index:
@@ -169,5 +162,5 @@ with st.expander("シミュレーションする"):
   if do:
     count = [[0 for i in range(2)]for j in range(repeat+1)]
     count = simulate(repeat, count)
-    chart_data = pd.DataFrame(count, columns = ["変更する", "変更しない"])
+    chart_data = pd.DataFrame(count, columns = ["変更しない", "変更する"])
     st.line_chart(chart_data, x_label = "試行回数", y_label = "当たりの回数")
